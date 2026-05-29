@@ -142,8 +142,7 @@ router.post('/auth/telegram', (req, res) => {
     res.cookie('session_token', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 ngày
+      sameSite: 'strict'
     });
 
     return res.json({ success: true, user: telegramUser });
@@ -275,8 +274,7 @@ router.post('/auth/telegram/phone/login', async (req, res) => {
     res.cookie('session_token', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 ngày
+      sameSite: 'strict'
     });
 
     // Dọn dẹp session tạm
@@ -397,8 +395,7 @@ router.post('/auth/session', (req, res) => {
     res.cookie('session_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 ngày
+      sameSite: 'strict'
     });
     return res.json({ success: true, user: { userId: decoded.userId, username: decoded.username } });
   } catch (e) {
