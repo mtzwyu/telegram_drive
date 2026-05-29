@@ -24,9 +24,8 @@ const ALLOWED_USER_IDS = (process.env.ALLOWED_USER_IDS || '').split(',').map(id 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
 const WEB_URL = process.env.WEB_URL || 'http://localhost:5000';
 
-if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHANNEL_ID) {
-  console.error('LỖI KHỞI ĐỘNG: Thiếu TELEGRAM_BOT_TOKEN hoặc TELEGRAM_CHANNEL_ID trong biến môi trường!');
-  process.exit(1);
+if (!TELEGRAM_BOT_TOKEN) {
+  console.warn('⚠️ Cảnh báo: Thiếu TELEGRAM_BOT_TOKEN trong biến môi trường (chức năng đăng nhập Mini App sẽ không hoạt động).');
 }
 
 // -------------------------------------------------------------
