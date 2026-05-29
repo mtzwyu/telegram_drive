@@ -69,7 +69,7 @@ graph LR
 ## 🚀 Triển Khai Thực Tế (Live Demo)
 
 Dự án hiện đã được triển khai hoàn chỉnh và có thể truy cập tại:
-- **Frontend App:** [https://telegram-drive-orcin.vercel.app/](https://telegram-drive-orcin.vercel.app/)
+- **Frontend App:** [https://telegram-drive-mt.vercel.app/](https://telegram-drive-mt.vercel.app/)
 - **Backend API:** [https://telegram-drive-backend-40xz.onrender.com](https://telegram-drive-backend-40xz.onrender.com)
 - **Database:** Supabase Cloud
 
