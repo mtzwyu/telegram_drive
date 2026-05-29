@@ -21,6 +21,7 @@ function Login({ onAuthSuccess, theme }) {
   const [qrStatus, setQrStatus] = useState('idle'); // 'idle', 'connecting', 'active', 'requires_2fa', 'error', 'success'
   const [qrError, setQrError] = useState('');
   const [countdown, setCountdown] = useState(0);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const [botUsername, setBotUsername] = useState('');
   const sseRef = useRef(null);
@@ -95,7 +96,7 @@ function Login({ onAuthSuccess, theme }) {
           stopQrSse();
           
           try {
-            const res = await axios.post('/api/auth/session', { token: data.token });
+            const res = await axios.post('/api/auth/session', { token: data.token, rememberMe });
             if (res.data && res.data.success) {
               onAuthSuccess(res.data.user);
             }
@@ -165,7 +166,8 @@ function Login({ onAuthSuccess, theme }) {
     try {
       const payload = {
         loginSessionId,
-        phoneCode: phoneCode.trim()
+        phoneCode: phoneCode.trim(),
+        rememberMe
       };
       if (requires2FA && password.trim()) {
         payload.password = password.trim();
@@ -446,6 +448,18 @@ function Login({ onAuthSuccess, theme }) {
               </div>
             )}
 
+            {/* Duy trì đăng nhập */}
+            <div className="mt-6 flex items-center justify-between border-t border-[var(--border-color)] pt-4 font-mono text-[10px]">
+              <label className="flex items-center gap-2 cursor-pointer text-secondary hover:text-current select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-[var(--border-color)] bg-zinc-800 text-[var(--accent-color)] focus:ring-0 cursor-pointer accent-[var(--accent-color)]"
+                />
+                <span>Duy trì đăng nhập (30 ngày)</span>
+              </label>
+            </div>
 
           </div>
         </div>

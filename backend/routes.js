@@ -195,7 +195,7 @@ router.post('/auth/telegram/phone/send-code', async (req, res) => {
  * API: Đăng nhập bằng số điện thoại và mã OTP (có hỗ trợ 2FA)
  */
 router.post('/auth/telegram/phone/login', async (req, res) => {
-  const { loginSessionId, phoneCode, password } = req.body;
+  const { loginSessionId, phoneCode, password, rememberMe } = req.body;
   if (!loginSessionId || !phoneCode) {
     return res.status(400).json({ error: 'Thiếu thông tin đăng nhập' });
   }
@@ -271,11 +271,16 @@ router.post('/auth/telegram/phone/login', async (req, res) => {
     // Đăng nhập thành công, tạo JWT Session
     const username = user.username || user.firstName || 'TelegramUser';
     const sessionToken = jwt.sign({ userId, username }, JWT_SECRET, { expiresIn: '30d' });
-    res.cookie('session_token', sessionToken, {
+    
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict'
-    });
+    };
+    if (rememberMe) {
+      cookieOptions.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 ngày
+    }
+    res.cookie('session_token', sessionToken, cookieOptions);
 
     // Dọn dẹp session tạm
     activeLoginSessions.delete(loginSessionId);
@@ -385,18 +390,22 @@ router.get('/auth/telegram/qr/stream', async (req, res) => {
  * API: Nhận JWT token từ QR success và thiết lập cookie session
  */
 router.post('/auth/session', (req, res) => {
-  const { token } = req.body;
+  const { token, rememberMe } = req.body;
   if (!token) {
     return res.status(400).json({ error: 'Thiếu token' });
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    res.cookie('session_token', token, {
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict'
-    });
+    };
+    if (rememberMe) {
+      cookieOptions.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 ngày
+    }
+    res.cookie('session_token', token, cookieOptions);
     return res.json({ success: true, user: { userId: decoded.userId, username: decoded.username } });
   } catch (e) {
     return res.status(400).json({ error: 'Token không hợp lệ hoặc đã hết hạn' });
