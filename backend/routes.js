@@ -26,6 +26,9 @@ const TELEGRAM_CHANNEL_ID = process.env.TELEGRAM_CHANNEL_ID;
 const TELEGRAM_API_URL = process.env.TELEGRAM_API_URL || 'https://api.telegram.org';
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
+// Bản đồ lưu trữ trạng thái tiến độ tải lên (uploadId -> { status, progress, error, file })
+const uploadJobs = new Map();
+
 // Cấu hình Multer để lưu tạm file khi upload từ web
 const tempDir = process.env.TEMP_UPLOAD_DIR || path.join(process.cwd(), 'temp');
 if (!fs.existsSync(tempDir)) {
@@ -484,13 +487,32 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
   }
 
   const tags = req.body.tags || '';
+  const uploadId = req.body.uploadId;
   const tempFilePath = req.file.path;
   const originalName = req.file.originalname;
   const mimeType = req.file.mimetype || 'application/octet-stream';
 
+  if (uploadId) {
+    uploadJobs.set(uploadId, { status: 'encrypting', progress: 0 });
+    // Dọn dẹp tiến trình sau 10 phút để tránh tràn bộ nhớ
+    setTimeout(() => {
+      uploadJobs.delete(uploadId);
+    }, 10 * 60 * 1000);
+  }
+
   try {
     // 1. Upload file lên Saved Messages qua MTProto
-    const tgResult = await uploadFile(tempFilePath, originalName, mimeType, tags ? `#${tags.split(',').join(' #')}` : '');
+    const tgResult = await uploadFile(
+      tempFilePath,
+      originalName,
+      mimeType,
+      tags ? `#${tags.split(',').join(' #')}` : '',
+      (percent) => {
+        if (uploadId) {
+          uploadJobs.set(uploadId, { status: 'uploading_telegram', progress: percent });
+        }
+      }
+    );
 
     // 2. Phân loại định dạng file
     const category = categorizeFile(mimeType, originalName);
@@ -509,9 +531,16 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
       tags
     });
 
+    if (uploadId) {
+      uploadJobs.set(uploadId, { status: 'success', progress: 100, file: savedFile });
+    }
+
     res.json({ success: true, file: savedFile });
   } catch (error) {
     console.error('Lỗi khi upload file:', error.message);
+    if (uploadId) {
+      uploadJobs.set(uploadId, { status: 'error', progress: 0, error: error.message });
+    }
     res.status(500).json({ error: error.message || 'Lỗi hệ thống khi upload' });
   } finally {
     // 4. Dọn dẹp file tạm trên máy chủ
@@ -523,6 +552,18 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
       console.error('Không thể xóa file tạm:', e);
     }
   }
+});
+
+/**
+ * API: Lấy tiến độ tải lên Telegram của tệp tin.
+ */
+router.get('/upload/progress/:uploadId', authenticateToken, (req, res) => {
+  const { uploadId } = req.params;
+  const job = uploadJobs.get(uploadId);
+  if (!job) {
+    return res.status(404).json({ error: 'Không tìm thấy tiến trình tải lên hoặc đã hết hạn.' });
+  }
+  res.json(job);
 });
 
 /**

@@ -10,6 +10,7 @@ function UploadZone({ onUploadSuccess, onAllComplete, theme }) {
   const [uploadIndex, setUploadIndex] = useState(0);
   const [status, setStatus] = useState('idle'); // idle, uploading, success, error
   const [errorMessage, setErrorMessage] = useState('');
+  const [statusText, setStatusText] = useState('');
   const fileInputRef = useRef(null);
 
   const formatFileSize = (bytes) => {
@@ -34,7 +35,7 @@ function UploadZone({ onUploadSuccess, onAllComplete, theme }) {
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(false);
-
+ 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       setFiles(Array.from(e.dataTransfer.files));
       setStatus('idle');
@@ -64,6 +65,7 @@ function UploadZone({ onUploadSuccess, onAllComplete, theme }) {
     setUploadIndex(0);
     setStatus('idle');
     setErrorMessage('');
+    setStatusText('');
   };
 
   const uploadFiles = async () => {
@@ -72,15 +74,38 @@ function UploadZone({ onUploadSuccess, onAllComplete, theme }) {
     setStatus('uploading');
     setProgress(0);
     setErrorMessage('');
+    setStatusText('Khởi động tiến trình tải lên...');
 
     for (let i = 0; i < files.length; i++) {
       setUploadIndex(i);
       setProgress(0);
       const currentFile = files[i];
 
+      const uploadId = 'up-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
       const formData = new FormData();
       formData.append('file', currentFile);
       formData.append('tags', tagsInput.trim());
+      formData.append('uploadId', uploadId);
+
+      let pollInterval = null;
+
+      const startPolling = () => {
+        pollInterval = setInterval(async () => {
+          try {
+            const res = await axios.get(`/api/upload/progress/${uploadId}`);
+            const { status: jobStatus, progress: jobProgress } = res.data;
+            if (jobStatus === 'encrypting') {
+              setStatusText('Đang mã hóa tệp tin bảo mật...');
+              setProgress(100);
+            } else if (jobStatus === 'uploading_telegram') {
+              setStatusText(`Đang truyền tiếp lên Telegram: ${jobProgress}%`);
+              setProgress(jobProgress);
+            }
+          } catch (err) {
+            // Bỏ qua lỗi kết nối tạm thời khi polling
+          }
+        }, 1000);
+      };
 
       try {
         const response = await axios.post('/api/upload', formData, {
@@ -89,7 +114,16 @@ function UploadZone({ onUploadSuccess, onAllComplete, theme }) {
           },
           onUploadProgress: (progressEvent) => {
             const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setProgress(percentCompleted);
+            if (percentCompleted < 100) {
+              setProgress(percentCompleted);
+              setStatusText(`Đang gửi dữ liệu lên máy chủ bộ đệm: ${percentCompleted}%`);
+            } else {
+              setProgress(100);
+              setStatusText('Đã tải xong lên bộ đệm. Đang mã hóa và gửi lên Telegram...');
+              if (!pollInterval) {
+                startPolling();
+              }
+            }
           }
         });
 
@@ -102,6 +136,10 @@ function UploadZone({ onUploadSuccess, onAllComplete, theme }) {
         const errString = typeof errData === 'object' ? (errData.message || JSON.stringify(errData)) : errData;
         setErrorMessage(errString || error.message || `Lỗi tải lên tệp tin: "${currentFile.name}"`);
         return; // Dừng tiến trình tải lên nếu có lỗi xảy ra
+      } finally {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+        }
       }
     }
 
@@ -236,7 +274,9 @@ function UploadZone({ onUploadSuccess, onAllComplete, theme }) {
                 <p className="text-xs font-bold truncate max-w-xs text-current uppercase">
                   {files[uploadIndex]?.name}
                 </p>
-                <p className="text-[9px] text-[var(--text-secondary)]">TRANSMISSION RATIO: {progress}%</p>
+                <p className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wider">
+                  {statusText || `TRANSMISSION RATIO: ${progress}%`}
+                </p>
               </div>
               
               {/* Premium minimal progress bar */}

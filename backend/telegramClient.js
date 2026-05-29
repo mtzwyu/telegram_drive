@@ -104,12 +104,15 @@ export async function updateSessionAndReconnect(newSessionString) {
  * @param {string} caption - Caption / ghi chú đính kèm (tùy chọn).
  * @returns {{ messageId: number, fileId: string, fileSize: number }}
  */
-export async function uploadFile(filePath, fileName, mimeType, caption = '') {
+export async function uploadFile(filePath, fileName, mimeType, caption = '', progressCallback = null) {
   const client = await getClient();
   const encFilePath = filePath + '.enc';
 
   try {
     // 1. Mã hóa tệp tin ra đĩa bằng luồng (Streaming)
+    if (progressCallback) {
+      progressCallback(0);
+    }
     await encryptFileOnDisk(filePath, encFilePath);
     const fileSize = fs.statSync(encFilePath).size;
 
@@ -122,7 +125,13 @@ export async function uploadFile(filePath, fileName, mimeType, caption = '') {
       caption: caption || `📎 ${fileName}`,
       fileName: fileName,
       forceDocument: true, // Gửi dưới dạng tài liệu (document) thay vì ảnh/video
-      workers: 10, // Tải lên song song với 10 workers để tối ưu tốc độ
+      workers: 2, // Giảm số lượng workers để tránh làm quá tải CPU/RAM trên Render Free (tránh OOM)
+      progressCallback: (downloaded, fullSize) => {
+        if (progressCallback && fullSize && fullSize.toJSNumber() > 0) {
+          const percent = Math.round((downloaded.toJSNumber() / fullSize.toJSNumber()) * 100);
+          progressCallback(percent);
+        }
+      }
     });
 
     // Trích xuất thông tin từ kết quả
