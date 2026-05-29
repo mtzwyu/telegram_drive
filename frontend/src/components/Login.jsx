@@ -103,7 +103,7 @@ function Login({ onAuthSuccess, theme }) {
           try {
             const res = await axios.post('/api/auth/session', { token: data.token, rememberMe: rememberMeRef.current });
             if (res.data && res.data.success) {
-              onAuthSuccess(res.data.user);
+              onAuthSuccess(res.data.user, res.data.token, rememberMeRef.current);
             }
           } catch (err) {
             setQrStatus('error');
@@ -184,7 +184,7 @@ function Login({ onAuthSuccess, theme }) {
           setRequires2FA(true);
           setPhoneError('Tài khoản yêu cầu mật khẩu 2FA. Vui lòng nhập mật khẩu cấp 2.');
         } else {
-          onAuthSuccess(res.data.user);
+          onAuthSuccess(res.data.user, res.data.token, rememberMe);
         }
       }
     } catch (err) {

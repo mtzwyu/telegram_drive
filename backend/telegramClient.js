@@ -122,7 +122,7 @@ export async function uploadFile(filePath, fileName, mimeType, caption = '') {
       caption: caption || `📎 ${fileName}`,
       fileName: fileName,
       forceDocument: true, // Gửi dưới dạng tài liệu (document) thay vì ảnh/video
-      workers: 4, // Tải lên song song với 4 workers để tối ưu tốc độ
+      workers: 10, // Tải lên song song với 10 workers để tối ưu tốc độ
     });
 
     // Trích xuất thông tin từ kết quả
@@ -221,10 +221,10 @@ export async function downloadFileToDisk(messageId, targetFilePath) {
   const tempEncPath = targetFilePath + '.enc';
   const writeStream = fs.createWriteStream(tempEncPath);
 
-  // 1. Tải tệp đã mã hóa về đĩa theo từng khối 1MB
+  // 1. Tải tệp đã mã hóa về đĩa theo từng khối 2MB
   for await (const chunk of client.iterDownload({
     file: messages[0].media,
-    requestSize: 1024 * 1024,
+    requestSize: 2048 * 1024, // Tải từng khối 2MB
   })) {
     writeStream.write(chunk);
   }

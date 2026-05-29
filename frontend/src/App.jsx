@@ -7,6 +7,26 @@ import { Sun, Moon } from 'lucide-react';
 // Cấu hình axios gửi kèm credentials (cookies)
 axios.defaults.withCredentials = true;
 
+// Xác định baseURL động để trỏ thẳng tới Render Backend
+const getBackendUrl = () => {
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return 'http://localhost:5000'; // Port backend chạy local
+  }
+  return 'https://telegram-drive-backend-40xz.onrender.com'; // Production Render Backend
+};
+axios.defaults.baseURL = getBackendUrl();
+
+// Axios request interceptor để đính kèm Bearer Token
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('tg_drive_token') || sessionStorage.getItem('tg_drive_token');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => {
+  return Promise.reject(error);
+});
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -88,6 +108,9 @@ function App() {
       if (res.data && res.data.success) {
         setIsAuthenticated(true);
         setUser(res.data.user);
+        if (res.data.token) {
+          localStorage.setItem('tg_drive_token', res.data.token);
+        }
       }
     } catch (err) {
       console.error('Xác thực Telegram Mini App thất bại:', err.response?.data?.error || err.message);
@@ -110,6 +133,8 @@ function App() {
       await axios.post('/api/auth/logout');
       setIsAuthenticated(false);
       setUser(null);
+      localStorage.removeItem('tg_drive_token');
+      sessionStorage.removeItem('tg_drive_token');
     } catch (err) {
       console.error('Không thể đăng xuất:', err);
     }
@@ -152,9 +177,16 @@ function App() {
         ) : isAuthenticated ? (
           <Dashboard user={user} handleLogout={handleLogoutClick} isTWA={isTelegramMiniApp} theme={theme} />
         ) : (
-          <Login onAuthSuccess={(user) => {
+          <Login onAuthSuccess={(user, token, rememberMe) => {
             setIsAuthenticated(true);
             setUser(user);
+            if (token) {
+              if (rememberMe) {
+                localStorage.setItem('tg_drive_token', token);
+              } else {
+                sessionStorage.setItem('tg_drive_token', token);
+              }
+            }
           }} theme={theme} />
         )}
       </div>

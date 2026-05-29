@@ -48,14 +48,27 @@ const upload = multer({ storage });
  * Middleware xác thực JWT Session từ Cookie.
  */
 export function authenticateToken(req, res, next) {
-  const token = req.cookies?.session_token;
+  let token = req.cookies?.session_token;
+
+  // Nếu không có cookie, kiểm tra Authorization header (Token-based Auth)
+  if (!token) {
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+  }
+
   if (!token) {
     return res.status(401).json({ error: 'Chưa đăng nhập' });
   }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      res.clearCookie('session_token');
+      res.clearCookie('session_token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+      });
       return res.status(403).json({ error: 'Session hết hạn hoặc không hợp lệ' });
     }
     req.user = user;
@@ -142,10 +155,10 @@ router.post('/auth/telegram', (req, res) => {
     res.cookie('session_token', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict'
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     });
 
-    return res.json({ success: true, user: telegramUser });
+    return res.json({ success: true, user: telegramUser, token: sessionToken });
   }
 
   return res.status(400).json({ error: 'Thiếu thông tin đăng nhập' });
@@ -275,7 +288,7 @@ router.post('/auth/telegram/phone/login', async (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict'
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     };
     if (rememberMe) {
       cookieOptions.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 ngày
@@ -290,7 +303,8 @@ router.post('/auth/telegram/phone/login', async (req, res) => {
       user: {
         userId,
         username
-      }
+      },
+      token: sessionToken
     });
   } catch (error) {
     console.error('Lỗi khi đăng nhập bằng SĐT:', error);
@@ -400,13 +414,13 @@ router.post('/auth/session', (req, res) => {
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict'
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     };
     if (rememberMe) {
       cookieOptions.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 ngày
     }
     res.cookie('session_token', token, cookieOptions);
-    return res.json({ success: true, user: { userId: decoded.userId, username: decoded.username } });
+    return res.json({ success: true, user: { userId: decoded.userId, username: decoded.username }, token });
   } catch (e) {
     return res.status(400).json({ error: 'Token không hợp lệ hoặc đã hết hạn' });
   }
@@ -416,7 +430,11 @@ router.post('/auth/session', (req, res) => {
  * API: Đăng xuất.
  */
 router.post('/auth/logout', (req, res) => {
-  res.clearCookie('session_token');
+  res.clearCookie('session_token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+  });
   res.json({ success: true });
 });
 
