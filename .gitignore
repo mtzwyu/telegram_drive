@@ -1,0 +1,10 @@
+node_modules
+frontend/dist
+backend/public
+.env
+.env*.local
+drive.json
+*.db
+*.db-journal
+temp
+.gemini

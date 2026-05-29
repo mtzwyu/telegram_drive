@@ -1,0 +1,324 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Outfit', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* -------------------------------------------------------------
+   Hệ thống biến CSS - Telegram Drive (Warm Charcoal & Gold)
+   ------------------------------------------------------------- */
+:root {
+  --bg-primary: #0E0F11; /* Warm Charcoal Dark */
+  --bg-secondary: #15171a;
+  --bg-card: rgba(28, 31, 36, 0.85);
+  --text-primary: #E4E4E4; /* Sand Off-White */
+  --text-secondary: #8a8f98;
+  --accent-color: #c5a880; /* Soft Gold */
+  --accent-secondary: #1e4e52; /* Deep Teal */
+  --border-color: rgba(197, 168, 128, 0.15);
+  --border-hover: rgba(197, 168, 128, 0.5);
+  --shadow-glow: rgba(197, 168, 128, 0.12);
+  --grid-line-color: rgba(228, 228, 228, 0.015);
+}
+
+/* Chế độ Sáng (Warm Editorial Light) */
+body.light {
+  --bg-primary: #f9f7f4; /* Kem cát ấm */
+  --bg-secondary: #f0eee9;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --text-primary: #1a1d24;
+  --text-secondary: #64748b;
+  --accent-color: #9f7e56; /* Darker Gold for readability */
+  --accent-secondary: #286266;
+  --border-color: rgba(159, 126, 86, 0.2);
+  --border-hover: rgba(159, 126, 86, 0.6);
+  --shadow-glow: rgba(159, 126, 86, 0.08);
+  --grid-line-color: rgba(26, 29, 36, 0.02);
+}
+
+/* Chế độ Tối (Warm Cyber Dark) */
+body.dark {
+  --bg-primary: #0E0F11;
+  --bg-secondary: #15171a;
+  --bg-card: rgba(28, 31, 36, 0.8);
+  --text-primary: #E4E4E4;
+  --text-secondary: #8a8f98;
+  --accent-color: #c5a880;
+  --accent-secondary: #1e4e52;
+  --border-color: rgba(197, 168, 128, 0.18);
+  --border-hover: rgba(197, 168, 128, 0.55);
+  --shadow-glow: rgba(197, 168, 128, 0.15);
+  --grid-line-color: rgba(228, 228, 228, 0.015);
+}
+
+body.twa {
+  --bg-primary: var(--tg-theme-bg-color, var(--bg-primary));
+  --text-primary: var(--tg-theme-text-color, var(--text-primary));
+}
+
+/* -------------------------------------------------------------
+   Visual Textures & Stacking Layouts
+   ------------------------------------------------------------- */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), color 0.3s ease;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Hiệu ứng hạt nhiễu sang trọng cát mịn */
+.grain-overlay {
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.022'/%3E%3C/svg%3E");
+}
+
+/* Kẻ lưới đồ họa tinh tế kiến trúc Telegram Drive */
+.editorial-grid-bg {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, var(--grid-line-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-line-color) 1px, transparent 1px);
+  background-size: 80px 80px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Background Backlights */
+.mesh-blob-1 {
+  background: radial-gradient(circle, rgba(197, 168, 128, 0.08) 0%, rgba(0, 0, 0, 0) 70%);
+  filter: blur(120px);
+}
+body.light .mesh-blob-1 {
+  background: radial-gradient(circle, rgba(159, 126, 86, 0.04) 0%, rgba(0, 0, 0, 0) 70%);
+}
+
+.mesh-blob-2 {
+  background: radial-gradient(circle, rgba(30, 78, 82, 0.06) 0%, rgba(0, 0, 0, 0) 70%);
+  filter: blur(120px);
+}
+
+/* -------------------------------------------------------------
+   3D Perspective Tilt Button
+   ------------------------------------------------------------- */
+.btn-3d-tilt {
+  position: relative;
+  background: linear-gradient(135deg, var(--accent-color) 0%, #a68c67 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px; /* Capsule */
+  color: #0E0F11;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  padding: 10px 24px;
+  box-shadow: 
+    0 6px 20px var(--shadow-glow),
+    inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transform-style: preserve-3d;
+}
+
+/* Hiệu ứng nghiêng 3D Perspective */
+.btn-3d-tilt:hover {
+  transform: perspective(300px) rotateX(10deg) rotateY(-10deg) translateZ(5px);
+  box-shadow: 
+    -5px 10px 25px var(--shadow-glow),
+    inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  border-color: var(--accent-color);
+  background: linear-gradient(135deg, #dfc7a7 0%, var(--accent-color) 100%);
+}
+
+.btn-3d-tilt:active {
+  transform: perspective(300px) translateY(3px) scale(0.97);
+  box-shadow: 0 2px 10px var(--shadow-glow);
+}
+
+/* Circular Actions in Stacking Cards */
+.circular-action-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  background: transparent;
+  cursor: pointer;
+  transform-style: preserve-3d;
+}
+
+.circular-action-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+  transform: perspective(300px) rotateX(15deg) rotateY(-15deg) scale(1.1);
+  box-shadow: 0 0 12px var(--shadow-glow);
+}
+
+.circular-action-btn:active {
+  transform: scale(0.95);
+}
+
+/* -------------------------------------------------------------
+   Typography & Editorial Elements
+   ------------------------------------------------------------- */
+.title-font {
+  font-family: 'Outfit', sans-serif;
+  letter-spacing: -0.04em;
+}
+
+.editorial-brand-box {
+  border: 1.5px solid var(--accent-color);
+  padding: 0.5rem 1.5rem;
+  display: inline-block;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  font-family: 'Outfit', sans-serif;
+  color: var(--accent-color);
+  box-shadow: 0 0 15px var(--shadow-glow);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-style: preserve-3d;
+}
+
+.editorial-brand-box:hover {
+  background-color: var(--accent-color);
+  color: #0E0F11;
+  transform: perspective(300px) rotateX(10deg) rotateY(-10deg);
+}
+
+.glass-panel {
+  background: var(--bg-card);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 25px 65px rgba(0, 0, 0, 0.65);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-panel:hover {
+  border-color: var(--border-hover);
+  box-shadow: 0 25px 65px var(--shadow-glow);
+}
+
+/* Lưới Stacking Card xếp so le của Telegram Drive */
+.asymmetric-project-card {
+  position: relative;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 3rem;
+  transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.asymmetric-project-card:hover {
+  border-bottom-color: var(--accent-color);
+  transform: translateX(10px);
+}
+
+/* Ẩn thanh cuộn cho category horizontal scroll */
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Custom premium styles cho File Card */
+.premium-file-card {
+  position: relative;
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.premium-file-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  border-color: var(--accent-color);
+  box-shadow: 0 15px 35px var(--shadow-glow), 0 0 0 1px rgba(197, 168, 128, 0.1);
+}
+
+/* Actions overlay trượt từ dưới lên khi hover */
+.file-actions-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(to top, rgba(14, 15, 17, 0.95) 0%, rgba(14, 15, 17, 0.7) 70%, transparent 100%);
+  padding: 1.25rem;
+  transform: translateY(100%);
+  opacity: 0;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  z-index: 20;
+}
+
+body.light .file-actions-overlay {
+  background: linear-gradient(to top, rgba(249, 247, 244, 0.95) 0%, rgba(249, 247, 244, 0.7) 70%, transparent 100%);
+}
+
+.premium-file-card:hover .file-actions-overlay {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-color);
+}
+
+/* -------------------------------------------------------------
+   Custom Animations for Modals & Floating Action Bars
+   ------------------------------------------------------------- */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slide-up-in {
+  from {
+    transform: translate(-50%, 24px);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up-in {
+  animation: slide-up-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+

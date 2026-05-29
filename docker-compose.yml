@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  telegram-bot-api:
+    image: aiogram/telegram-bot-api:latest
+    container_name: telegram-bot-api
+    restart: always
+    environment:
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}
+    volumes:
+      - telegram-bot-api-data:/var/lib/telegram-bot-api
+    command: --local --api-id=${TELEGRAM_API_ID} --api-hash=${TELEGRAM_API_HASH}
+    ports:
+      - "8081:8081"
+
+  drive-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telegram-drive-app
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID}
+      - ALLOWED_USER_IDS=${ALLOWED_USER_IDS}
+      - JWT_SECRET=${JWT_SECRET}
+      - TELEGRAM_API_URL=http://telegram-bot-api:8081
+      - DATABASE_PATH=/app/data/drive.json
+      - TEMP_UPLOAD_DIR=/app/data/temp
+      - TELEGRAM_API_ID=${TELEGRAM_API_ID}
+      - TELEGRAM_API_HASH=${TELEGRAM_API_HASH}
+      - TELEGRAM_STRING_SESSION=${TELEGRAM_STRING_SESSION}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    volumes:
+      - sqlite-data:/app/data
+    depends_on:
+      - telegram-bot-api
+
+volumes:
+  telegram-bot-api-data:
+  sqlite-data:

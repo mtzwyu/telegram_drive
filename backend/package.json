@@ -1,0 +1,27 @@
+{
+  "name": "telegram-drive-backend",
+  "version": "1.0.0",
+  "description": "Backend API and Telegram Bot for Telegram Cloud Drive",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "@cryptography/aes": "^0.1.1",
+    "@supabase/supabase-js": "^2.106.2",
+    "axios": "^1.6.8",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1",
+    "telegraf": "^4.16.3",
+    "telegram": "^2.26.22"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
