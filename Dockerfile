@@ -1,7 +1,7 @@
 # ==========================================
 # GIAI ĐOẠN 1: Build Frontend React + Vite
 # ==========================================
-FROM node:20-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 WORKDIR /app/frontend
 
 # Sao chép và cài đặt các dependency của frontend
@@ -15,7 +15,7 @@ RUN npm run build
 # ==========================================
 # GIAI ĐOẠN 2: Thiết lập Backend và chạy ứng dụng
 # ==========================================
-FROM node:20-alpine
+FROM node:22-alpine
 WORKDIR /app
 
 # Cài đặt các công cụ build cần thiết để biên dịch native dependencies (như better-sqlite3)
