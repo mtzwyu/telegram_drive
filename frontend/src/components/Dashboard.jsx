@@ -1066,21 +1066,21 @@ function Dashboard({ user, handleLogout, isTWA, theme }) {
          FLOATING BULK ACTION BAR
          ============================================================= */}
       {selectedUuids.length > 0 && !bulkDeleteProgress.isDeleting && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-lg glass-panel rounded-2xl p-4 border border-[var(--accent-color)]/30 shadow-[0_15px_50px_rgba(0,0,0,0.8)] flex items-center justify-between gap-4 animate-slide-up-in text-white">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-lg glass-panel rounded-2xl p-4 border border-[var(--accent-color)]/30 shadow-[0_15px_50px_rgba(0,0,0,0.8)] flex items-center justify-between gap-4 animate-slide-up-in text-[var(--text-primary)]">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[var(--accent-color)]/10 border border-[var(--accent-color)]/20 flex items-center justify-center text-[var(--accent-color)] font-mono text-xs font-black">
               {selectedUuids.length}
             </div>
             <div className="text-left font-mono">
               <span className="text-[9px] text-[var(--accent-color)] uppercase tracking-widest block font-bold">LỰA CHỌN HIỆN TẠI</span>
-              <p className="text-[10px] text-gray-300 font-semibold mt-0.5">Đã chọn {selectedUuids.length} tệp tin</p>
+              <p className="text-[10px] text-[var(--text-secondary)] font-semibold mt-0.5">Đã chọn {selectedUuids.length} tệp tin</p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
             <button
               onClick={clearSelection}
-              className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-[9px] font-mono uppercase tracking-wider font-bold transition cursor-pointer"
+              className="px-4 py-2 rounded-xl border border-[var(--border-color)] hover:bg-current/5 text-[9px] font-mono uppercase tracking-wider font-bold transition cursor-pointer"
             >
               Hủy
             </button>

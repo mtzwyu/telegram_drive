@@ -3,6 +3,8 @@
 @theme {
   --font-display: 'Outfit', sans-serif;
   --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --color-secondary: var(--text-secondary);
+  --color-primary: var(--text-primary);
 }
 
 /* -------------------------------------------------------------

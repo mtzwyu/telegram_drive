@@ -229,7 +229,7 @@ function Login({ onAuthSuccess, theme }) {
               <h4 className="text-[9px] font-bold text-[var(--accent-color)] uppercase tracking-widest">
                 TELEGRAM CLOUD STORAGE
               </h4>
-              <p className="text-sm font-bold tracking-wide text-gray-100 font-display">
+              <p className="text-sm font-bold tracking-wide text-[var(--text-primary)] font-display">
                 Hệ thống lưu trữ đám mây cá nhân của bạn
               </p>
               <div className="flex justify-center sm:justify-start gap-4 pt-1.5 text-[9px] text-secondary">
