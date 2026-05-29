@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
+import { pipeline } from 'stream/promises';
 
 // Load biến môi trường từ file .env nếu chạy ở chế độ dev local
 dotenv.config();
@@ -208,4 +209,56 @@ export function updateEnvFile(key, value) {
   }
 
   fs.writeFileSync(envPath, content, 'utf8');
+}
+
+/**
+ * Mã hóa tệp tin trực tiếp trên đĩa bằng luồng (Streaming) để tránh tràn RAM (OOM).
+ * Định dạng: [12-byte IV] + [16-byte Auth Tag] + [Encrypted Data]
+ */
+export async function encryptFileOnDisk(srcPath, destPath) {
+  const key = getEncryptionKey();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+
+  const readStream = fs.createReadStream(srcPath);
+  const writeStream = fs.createWriteStream(destPath);
+
+  // Ghi IV và Placeholder Tag (16 bytes) trước
+  writeStream.write(iv);
+  writeStream.write(Buffer.alloc(16));
+
+  // Thực hiện stream mã hóa phần còn lại của file
+  await pipeline(readStream, cipher, writeStream);
+
+  // Lấy Auth Tag sau khi stream kết thúc
+  const tag = cipher.getAuthTag();
+
+  // Mở file ở chế độ đọc ghi để điền lại Auth Tag vào đúng offset 12
+  const fd = fs.openSync(destPath, 'r+');
+  fs.writeSync(fd, tag, 0, 16, 12);
+  fs.closeSync(fd);
+}
+
+/**
+ * Giải mã tệp tin trực tiếp trên đĩa bằng luồng (Streaming).
+ */
+export async function decryptFileOnDisk(srcPath, destPath) {
+  const key = getEncryptionKey();
+
+  // Đọc IV và Tag từ 28 bytes đầu tiên
+  const fd = fs.openSync(srcPath, 'r');
+  const iv = Buffer.alloc(12);
+  const tag = Buffer.alloc(16);
+  fs.readSync(fd, iv, 0, 12, 0);
+  fs.readSync(fd, tag, 0, 16, 12);
+  fs.closeSync(fd);
+
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(tag);
+
+  // Đọc từ offset 28
+  const readStream = fs.createReadStream(srcPath, { start: 28 });
+  const writeStream = fs.createWriteStream(destPath);
+
+  await pipeline(readStream, decipher, writeStream);
 }

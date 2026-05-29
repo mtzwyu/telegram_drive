@@ -11,7 +11,7 @@ import { Api } from 'telegram/tl/index.js';
 import { computeCheck } from 'telegram/Password.js';
 import { dbService } from './db.js';
 import { categorizeFile, encryptText, decryptText, encryptBuffer, decryptBuffer, updateEnvFile } from './utils.js';
-import { uploadFile, downloadFile, deleteMessage, updateSessionAndReconnect } from './telegramClient.js';
+import { uploadFile, downloadFileToDisk, deleteMessage, updateSessionAndReconnect } from './telegramClient.js';
 
 // Load biến môi trường từ file .env
 dotenv.config();
@@ -519,15 +519,25 @@ router.get('/download/:uuid', authenticateToken, async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy file trong hệ thống' });
     }
 
-    // Tải file từ Saved Messages qua MTProto
-    const buffer = await downloadFile(parseInt(file.message_id));
+    const tempDownloadPath = path.join(tempDir, `down-${uuid}-${file.file_name}`);
 
-    // Thiết lập header phản hồi
-    res.setHeader('Content-Type', file.mime_type || 'application/octet-stream');
-    res.setHeader('Content-Length', buffer.length);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.file_name)}"`);
+    // Tải file từ Saved Messages qua MTProto và giải mã ra đĩa
+    await downloadFileToDisk(parseInt(file.message_id), tempDownloadPath);
 
-    res.send(buffer);
+    // Trả file về cho client và tự động dọn dẹp file tạm sau khi truyền xong
+    res.download(tempDownloadPath, file.file_name, (err) => {
+      try {
+        if (fs.existsSync(tempDownloadPath)) {
+          fs.unlinkSync(tempDownloadPath);
+        }
+      } catch (e) {
+        console.error('Không thể xóa file tạm sau khi gửi:', e);
+      }
+
+      if (err && !res.headersSent) {
+        console.error('Lỗi khi truyền tải tệp cho client:', err);
+      }
+    });
   } catch (error) {
     console.error('Lỗi khi tải file proxy:', error.message);
     res.status(500).json({ error: 'Lỗi khi kết nối tới Telegram để tải file' });
@@ -611,15 +621,25 @@ router.get('/share/:uuid', async (req, res) => {
       return res.status(404).send('Không tìm thấy file chia sẻ này.');
     }
 
-    // Tải file từ Saved Messages qua MTProto
-    const buffer = await downloadFile(parseInt(file.message_id));
+    const tempDownloadPath = path.join(tempDir, `share-${uuid}-${file.file_name}`);
 
-    // Thiết lập header phản hồi
-    res.setHeader('Content-Type', file.mime_type || 'application/octet-stream');
-    res.setHeader('Content-Length', buffer.length);
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.file_name)}"`);
+    // Tải file từ Saved Messages qua MTProto và giải mã ra đĩa
+    await downloadFileToDisk(parseInt(file.message_id), tempDownloadPath);
 
-    res.send(buffer);
+    // Trả file về cho client và tự động dọn dẹp file tạm sau khi truyền xong
+    res.download(tempDownloadPath, file.file_name, (err) => {
+      try {
+        if (fs.existsSync(tempDownloadPath)) {
+          fs.unlinkSync(tempDownloadPath);
+        }
+      } catch (e) {
+        console.error('Không thể xóa file tạm sau khi chia sẻ công khai:', e);
+      }
+
+      if (err && !res.headersSent) {
+        console.error('Lỗi khi truyền tải tệp công khai cho client:', err);
+      }
+    });
   } catch (error) {
     console.error('Lỗi khi tải file proxy công khai:', error.message);
     res.status(500).send('Lỗi khi kết nối tới Telegram để tải file công khai.');

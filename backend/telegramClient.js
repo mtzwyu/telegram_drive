@@ -8,7 +8,8 @@ import { Api } from 'telegram/tl/index.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
-import { encryptText, decryptText, encryptBuffer, decryptBuffer, updateEnvFile } from './utils.js';
+import { encryptText, decryptText, encryptBuffer, decryptBuffer, updateEnvFile, encryptFileOnDisk, decryptFileOnDisk } from './utils.js';
+import { CustomFile } from 'telegram/client/uploads.js';
 
 dotenv.config();
 if (!process.env.TELEGRAM_API_ID) {
@@ -105,50 +106,57 @@ export async function updateSessionAndReconnect(newSessionString) {
  */
 export async function uploadFile(filePath, fileName, mimeType, caption = '') {
   const client = await getClient();
+  const encFilePath = filePath + '.enc';
 
-  // Đọc file từ đĩa để upload qua MTProto
-  let fileBuffer = fs.readFileSync(filePath);
-
-  // Mã hóa buffer trước khi gửi
   try {
-    fileBuffer = encryptBuffer(fileBuffer);
-    console.log(`🔒 Đã mã hóa file ${fileName} trước khi tải lên Telegram.`);
-  } catch (err) {
-    console.error('❌ Lỗi khi mã hóa file:', err);
-    throw new Error('Không thể mã hóa file trước khi tải lên.');
+    // 1. Mã hóa tệp tin ra đĩa bằng luồng (Streaming)
+    await encryptFileOnDisk(filePath, encFilePath);
+    const fileSize = fs.statSync(encFilePath).size;
+
+    // 2. Tạo CustomFile để GramJS tự đọc chunk từ đĩa
+    const fileToUpload = new CustomFile(fileName, fileSize, encFilePath);
+
+    // 3. Gửi file vào Saved Messages (chat 'me')
+    const result = await client.sendFile('me', {
+      file: fileToUpload,
+      caption: caption || `📎 ${fileName}`,
+      fileName: fileName,
+      forceDocument: true, // Gửi dưới dạng tài liệu (document) thay vì ảnh/video
+      workers: 4, // Tải lên song song với 4 workers để tối ưu tốc độ
+    });
+
+    // Trích xuất thông tin từ kết quả
+    const messageId = result.id;
+
+    // Lấy file_id qua thuộc tính media.document
+    let fileId = '';
+    let fileUniqueId = '';
+
+    if (result.media && result.media.document) {
+      const doc = result.media.document;
+      fileId = `${doc.id}`;
+      fileUniqueId = `${doc.accessHash}`;
+    }
+
+    return {
+      messageId,
+      fileId,
+      fileUniqueId,
+      fileSize,
+    };
+  } catch (error) {
+    console.error('❌ Lỗi khi mã hóa/tải file lên Telegram:', error);
+    throw error;
+  } finally {
+    // 4. Dọn dẹp file mã hóa tạm trên máy chủ
+    try {
+      if (fs.existsSync(encFilePath)) {
+        fs.unlinkSync(encFilePath);
+      }
+    } catch (e) {
+      console.error('Không thể xóa file mã hóa tạm:', e);
+    }
   }
-
-  const fileSize = fileBuffer.length;
-
-  // Gửi file vào Saved Messages (chat 'me')
-  const result = await client.sendFile('me', {
-    file: fileBuffer,
-    caption: caption || `📎 ${fileName}`,
-    fileName: fileName,
-    forceDocument: true, // Gửi dưới dạng tài liệu (document) thay vì ảnh/video
-    workers: 1,
-  });
-
-  // Trích xuất thông tin từ kết quả
-  const messageId = result.id;
-
-  // Lấy file_id qua thuộc tính media.document
-  let fileId = '';
-  let fileUniqueId = '';
-
-  if (result.media && result.media.document) {
-    const doc = result.media.document;
-    // GramJS dùng ID nội bộ dạng BigInt, ta chuyển đổi để lưu
-    fileId = `${doc.id}`;
-    fileUniqueId = `${doc.accessHash}`;
-  }
-
-  return {
-    messageId,
-    fileId,
-    fileUniqueId,
-    fileSize,
-  };
 }
 
 /**
@@ -194,4 +202,51 @@ export async function downloadFile(messageId) {
 export async function deleteMessage(messageId) {
   const client = await getClient();
   await client.deleteMessages('me', [messageId], { revoke: true });
+}
+
+/**
+ * Tải file từ Telegram Saved Messages và lưu trực tiếp xuống đĩa theo chunk, sau đó giải mã.
+ * Giải pháp tối ưu hóa RAM (tránh OOM) cho file dung lượng lớn.
+ * @param {number} messageId - ID tin nhắn chứa file.
+ * @param {string} targetFilePath - Đường dẫn file đích (đã giải mã) trên đĩa.
+ */
+export async function downloadFileToDisk(messageId, targetFilePath) {
+  const client = await getClient();
+  const messages = await client.getMessages('me', { ids: [messageId] });
+
+  if (!messages || messages.length === 0 || !messages[0] || !messages[0].media) {
+    throw new Error('Không tìm thấy file trên Telegram.');
+  }
+
+  const tempEncPath = targetFilePath + '.enc';
+  const writeStream = fs.createWriteStream(tempEncPath);
+
+  // 1. Tải tệp đã mã hóa về đĩa theo từng khối 1MB
+  for await (const chunk of client.iterDownload({
+    file: messages[0].media,
+    requestSize: 1024 * 1024,
+  })) {
+    writeStream.write(chunk);
+  }
+  writeStream.end();
+
+  // Đợi writeStream ghi xong hoàn toàn
+  await new Promise((resolve, reject) => {
+    writeStream.on('finish', resolve);
+    writeStream.on('error', reject);
+  });
+
+  // 2. Giải mã tệp từ đĩa sang tệp đích bằng luồng (Streaming Decryption)
+  try {
+    await decryptFileOnDisk(tempEncPath, targetFilePath);
+  } finally {
+    // Dọn dẹp tệp mã hóa tạm
+    try {
+      if (fs.existsSync(tempEncPath)) {
+        fs.unlinkSync(tempEncPath);
+      }
+    } catch (e) {
+      console.error('Không thể xóa tệp mã hóa tạm sau giải mã:', e);
+    }
+  }
 }

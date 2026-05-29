@@ -98,7 +98,9 @@ function UploadZone({ onUploadSuccess, onAllComplete, theme }) {
         }
       } catch (error) {
         setStatus('error');
-        setErrorMessage(error.response?.data?.error || `Lỗi tải lên tệp tin: "${currentFile.name}"`);
+        const errData = error.response?.data?.error;
+        const errString = typeof errData === 'object' ? (errData.message || JSON.stringify(errData)) : errData;
+        setErrorMessage(errString || error.message || `Lỗi tải lên tệp tin: "${currentFile.name}"`);
         return; // Dừng tiến trình tải lên nếu có lỗi xảy ra
       }
     }
