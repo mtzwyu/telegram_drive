@@ -25,6 +25,11 @@ function Login({ onAuthSuccess, theme }) {
 
   const [botUsername, setBotUsername] = useState('');
   const sseRef = useRef(null);
+  const rememberMeRef = useRef(rememberMe);
+
+  useEffect(() => {
+    rememberMeRef.current = rememberMe;
+  }, [rememberMe]);
 
   // Lấy cấu hình công khai
   useEffect(() => {
@@ -96,7 +101,7 @@ function Login({ onAuthSuccess, theme }) {
           stopQrSse();
           
           try {
-            const res = await axios.post('/api/auth/session', { token: data.token, rememberMe });
+            const res = await axios.post('/api/auth/session', { token: data.token, rememberMe: rememberMeRef.current });
             if (res.data && res.data.success) {
               onAuthSuccess(res.data.user);
             }
