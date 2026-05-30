@@ -128,7 +128,7 @@ export function formatBytes(bytes) {
 }
 
 // Lấy hoặc băm khóa mã hóa
-const getEncryptionKey = () => {
+export const getEncryptionKey = () => {
   const keyStr = process.env.ENCRYPTION_KEY;
   if (!keyStr) {
     throw new Error('Thiếu ENCRYPTION_KEY trong biến môi trường!');

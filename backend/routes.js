@@ -10,7 +10,7 @@ import { StringSession } from 'telegram/sessions/index.js';
 import { Api } from 'telegram/tl/index.js';
 import { computeCheck } from 'telegram/Password.js';
 import { dbService } from './db.js';
-import { categorizeFile, encryptText, decryptText, encryptBuffer, decryptBuffer, updateEnvFile } from './utils.js';
+import { categorizeFile, encryptText, decryptText, encryptBuffer, decryptBuffer, updateEnvFile, getEncryptionKey } from './utils.js';
 import { uploadFile, downloadFileToDisk, deleteMessage, updateSessionAndReconnect } from './telegramClient.js';
 
 // Load biến môi trường từ file .env
@@ -35,15 +35,76 @@ if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
 }
 
-const storage = multer.diskStorage({
+// Custom Multer storage engine để mã hóa file ngay khi nhận luồng dữ liệu tải lên
+class EncryptedStorage {
+  constructor(opts) {
+    this.getDestination = opts.destination;
+    this.getEncryptionKey = opts.getEncryptionKey;
+  }
+
+  _handleFile(req, file, cb) {
+    this.getDestination(req, file, (err, targetDir) => {
+      if (err) return cb(err);
+
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const filename = uniqueSuffix + '-' + file.originalname + '.enc';
+      const finalPath = path.join(targetDir, filename);
+
+      try {
+        const key = this.getEncryptionKey();
+        const iv = crypto.randomBytes(12);
+        const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+
+        const writeStream = fs.createWriteStream(finalPath);
+
+        // Ghi IV và 16-byte placeholder cho Auth Tag trước
+        writeStream.write(iv);
+        writeStream.write(Buffer.alloc(16));
+
+        file.stream.pipe(cipher).pipe(writeStream);
+
+        writeStream.on('error', (err) => {
+          cb(err);
+        });
+
+        writeStream.on('finish', () => {
+          try {
+            const tag = cipher.getAuthTag();
+            const fd = fs.openSync(finalPath, 'r+');
+            fs.writeSync(fd, tag, 0, 16, 12);
+            fs.closeSync(fd);
+
+            cb(null, {
+              destination: targetDir,
+              filename: filename,
+              path: finalPath,
+              size: fs.statSync(finalPath).size
+            });
+          } catch (e) {
+            cb(e);
+          }
+        });
+      } catch (e) {
+        cb(e);
+      }
+    });
+  }
+
+  _removeFile(req, file, cb) {
+    const filePath = file.path;
+    if (filePath) {
+      fs.unlink(filePath, cb);
+    } else {
+      cb();
+    }
+  }
+}
+
+const storage = new EncryptedStorage({
   destination: (req, file, cb) => {
     cb(null, tempDir);
   },
-  filename: (req, file, cb) => {
-    // Giữ nguyên tên file gốc tránh lỗi mã hóa ký tự
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
-  }
+  getEncryptionKey: getEncryptionKey
 });
 const upload = multer({ storage });
 
@@ -493,7 +554,7 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
   const mimeType = req.file.mimetype || 'application/octet-stream';
 
   if (uploadId) {
-    uploadJobs.set(uploadId, { status: 'encrypting', progress: 0 });
+    uploadJobs.set(uploadId, { status: 'uploading_telegram', progress: 0 });
     // Dọn dẹp tiến trình sau 10 phút để tránh tràn bộ nhớ
     setTimeout(() => {
       uploadJobs.delete(uploadId);
@@ -501,7 +562,7 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
   }
 
   try {
-    // 1. Upload file lên Saved Messages qua MTProto
+    // 1. Upload file lên Saved Messages qua MTProto (đã mã hóa sẵn)
     const tgResult = await uploadFile(
       tempFilePath,
       originalName,
@@ -511,7 +572,8 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
         if (uploadId) {
           uploadJobs.set(uploadId, { status: status, progress: percent });
         }
-      }
+      },
+      true // isAlreadyEncrypted = true
     );
 
     // 2. Phân loại định dạng file
