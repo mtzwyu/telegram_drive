@@ -127,9 +127,26 @@ export async function uploadFile(filePath, fileName, mimeType, caption = '', pro
       forceDocument: true, // Gửi dưới dạng tài liệu (document) thay vì ảnh/video
       workers: 2, // Giảm số lượng workers để tránh làm quá tải CPU/RAM trên Render Free (tránh OOM)
       progressCallback: (downloaded, fullSize) => {
-        if (progressCallback && fullSize && fullSize.toJSNumber() > 0) {
-          const percent = Math.round((downloaded.toJSNumber() / fullSize.toJSNumber()) * 100);
-          progressCallback(percent);
+        if (!progressCallback) return;
+        try {
+          const toNum = (val) => {
+            if (val === undefined || val === null) return 0;
+            if (typeof val === 'number') return val;
+            if (typeof val === 'bigint') return Number(val);
+            if (typeof val.toJSNumber === 'function') return val.toJSNumber();
+            if (typeof val.toNumber === 'function') return val.toNumber();
+            return Number(val.toString()) || 0;
+          };
+
+          const downloadedBytes = toNum(downloaded);
+          const totalBytes = toNum(fullSize);
+
+          if (totalBytes > 0) {
+            const percent = Math.round((downloadedBytes / totalBytes) * 100);
+            progressCallback(percent);
+          }
+        } catch (err) {
+          console.error('⚠️ Lỗi trong progressCallback của client.sendFile:', err.message);
         }
       }
     });
