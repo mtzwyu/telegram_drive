@@ -26,7 +26,16 @@ let isConnected = false;
  * Lấy singleton Telegram User Client đã kết nối.
  */
 export async function getClient() {
-  if (clientInstance && isConnected) {
+  if (clientInstance) {
+    try {
+      await clientInstance.connect();
+    } catch (err) {
+      console.warn('⚠️ Lỗi kết nối lại GramJS clientInstance:', err.message);
+      try {
+        await clientInstance.disconnect();
+      } catch (_) {}
+      await clientInstance.connect();
+    }
     return clientInstance;
   }
 
@@ -111,13 +120,17 @@ export async function uploadFile(filePath, fileName, mimeType, caption = '', pro
   try {
     // 1. Mã hóa tệp tin ra đĩa bằng luồng (Streaming)
     if (progressCallback) {
-      progressCallback(0);
+      progressCallback(0, 'encrypting');
     }
     await encryptFileOnDisk(filePath, encFilePath);
     const fileSize = fs.statSync(encFilePath).size;
 
     // 2. Tạo CustomFile để GramJS tự đọc chunk từ đĩa
     const fileToUpload = new CustomFile(fileName, fileSize, encFilePath);
+
+    if (progressCallback) {
+      progressCallback(0, 'uploading_telegram');
+    }
 
     // 3. Gửi file vào Saved Messages (chat 'me')
     const result = await client.sendFile('me', {
@@ -143,7 +156,7 @@ export async function uploadFile(filePath, fileName, mimeType, caption = '', pro
 
           if (totalBytes > 0) {
             const percent = Math.round((downloadedBytes / totalBytes) * 100);
-            progressCallback(percent);
+            progressCallback(percent, 'uploading_telegram');
           }
         } catch (err) {
           console.error('⚠️ Lỗi trong progressCallback của client.sendFile:', err.message);

@@ -90,19 +90,32 @@ function UploadZone({ onUploadSuccess, onAllComplete, theme }) {
       let pollInterval = null;
 
       const startPolling = () => {
+        let pollErrorCount = 0;
         pollInterval = setInterval(async () => {
           try {
             const res = await axios.get(`/api/upload/progress/${uploadId}`);
-            const { status: jobStatus, progress: jobProgress } = res.data;
+            const { status: jobStatus, progress: jobProgress, error: jobError } = res.data;
+            
+            pollErrorCount = 0; // Reset số lần lỗi khi có phản hồi thành công
+
             if (jobStatus === 'encrypting') {
               setStatusText('Đang mã hóa tệp tin bảo mật...');
               setProgress(100);
             } else if (jobStatus === 'uploading_telegram') {
               setStatusText(`Đang truyền tiếp lên Telegram: ${jobProgress}%`);
               setProgress(jobProgress);
+            } else if (jobStatus === 'error') {
+              setStatus('error');
+              setErrorMessage(jobError || 'Lỗi xảy ra trên máy chủ khi gửi lên Telegram.');
+              clearInterval(pollInterval);
             }
           } catch (err) {
-            // Bỏ qua lỗi kết nối tạm thời khi polling
+            pollErrorCount++;
+            if (pollErrorCount > 15) { // Quá 15 giây liên tục không lấy được tiến trình
+              setStatus('error');
+              setErrorMessage('Không thể kết nối với máy chủ hoặc tiến trình tải lên bị sập.');
+              clearInterval(pollInterval);
+            }
           }
         }, 1000);
       };

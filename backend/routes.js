@@ -507,9 +507,9 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req, res
       originalName,
       mimeType,
       tags ? `#${tags.split(',').join(' #')}` : '',
-      (percent) => {
+      (percent, status) => {
         if (uploadId) {
-          uploadJobs.set(uploadId, { status: 'uploading_telegram', progress: percent });
+          uploadJobs.set(uploadId, { status: status, progress: percent });
         }
       }
     );
